@@ -43,6 +43,11 @@ export function Negotiation({ round }: { round: Round }) {
               <span className="ask-budget">
                 budget <span className="mono">{fmtSol(round.want.budgetSol)} SOL</span>
               </span>
+              {round.want.surface && (
+                <span className="ask-surface" title="the site the buyer wants audited">
+                  site <span className="mono">{round.want.surface.pages} pages · {round.want.surface.forms} forms · {round.want.surface.endpoints} endpoints</span>
+                </span>
+              )}
             </div>
           </div>
         </motion.div>

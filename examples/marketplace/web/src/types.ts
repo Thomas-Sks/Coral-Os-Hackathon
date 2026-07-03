@@ -31,7 +31,7 @@ export interface RoundDelivery {
 
 export interface Round {
   round: number
-  want?: { service: string; arg: string; budgetSol: number }
+  want?: { service: string; arg: string; budgetSol: number; surface?: { pages: number; forms: number; endpoints: number; params?: number } }
   bids: RoundBid[]
   declined: string[]
   award?: { to: string; reason?: string }

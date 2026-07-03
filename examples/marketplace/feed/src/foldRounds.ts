@@ -47,7 +47,7 @@ export interface RoundDelivery {
 
 export interface Round {
   round: number
-  want?: { service: string; arg: string; budgetSol: number }
+  want?: { service: string; arg: string; budgetSol: number; surface?: { pages: number; forms: number; endpoints: number; params?: number } }
   bids: RoundBid[]
   /** Sellers that were in the market but didn't bid (self-selected out) — needs the seller roster. */
   declined: string[]
@@ -90,7 +90,7 @@ export function foldRounds(messages: RawMessage[], sellers: string[] = []): Roun
     const text = m.text.trim()
 
     const want = parseWant(text)
-    if (want) { get(want.round).want = { service: want.service, arg: want.arg, budgetSol: want.budgetSol }; continue }
+    if (want) { get(want.round).want = { service: want.service, arg: want.arg, budgetSol: want.budgetSol, ...(want.surface ? { surface: want.surface } : {}) }; continue }
 
     const bid = parseBid(text)
     if (bid) {

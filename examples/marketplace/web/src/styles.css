@@ -640,3 +640,7 @@ a { color: var(--link); }
 .sx-link:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 .sx-settle { color: var(--settle); border-color: color-mix(in srgb, var(--settle) 40%, transparent); background: var(--settle-soft); }
 .sx-count { font-size: 11px; font-weight: 700; color: var(--faint); margin-left: auto; }
+
+/* The site profile in the buyer's ask — what the buyer wants audited */
+.ask-surface { font-size: 12.5px; color: var(--dim); }
+.ask-surface .mono { color: var(--txt); font-weight: 600; }
