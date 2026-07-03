@@ -1,0 +1,55 @@
+# AuditMesh bundled pentest target — compose fragment.
+#
+# Brings up the deliberately-vulnerable OWASP Juice Shop behind an nginx
+# front-door. The front-door (target-frontdoor) is the allowlisted host: it
+# serves the domain-control token at /.well-known/auditmesh-authz.txt and
+# reverse-proxies everything else to Juice Shop.
+#
+# Run STANDALONE from inside the target/ directory:
+#   docker-compose -f docker-compose.target.yml up
+# then reach the target at http://localhost:8899 .
+# The root harness compose ALSO includes these same services, so a full-stack
+# run does not need to start this fragment separately.
+#
+# All volume paths below are relative to this file's directory (target/).
+# Kept v1-compatible (version "3.8") so it parses under both docker-compose
+# v1.29 and modern `docker compose`.
+
+version: "3.8"
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop
+    container_name: juice-shop
+    # No host publish — only the front-door needs to reach it, over the shared
+    # network, by the hostname `juice-shop`.
+    expose:
+      - "3000"
+    healthcheck:
+      # Juice Shop ships a node runtime; hit its own root over HTTP.
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - auditmesh
+
+  target-frontdoor:
+    image: nginx:1.27-alpine
+    container_name: target-frontdoor
+    depends_on:
+      - juice-shop
+    ports:
+      - "8899:80"
+    volumes:
+      - ./frontdoor/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./.well-known/auditmesh-authz.txt:/etc/auditmesh/auditmesh-authz.txt:ro
+    restart: unless-stopped
+    networks:
+      - auditmesh
+
+networks:
+  auditmesh:
+    driver: bridge
