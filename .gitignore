@@ -1,0 +1,59 @@
+# Editor
+.idea
+.vscode
+.claude/
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+tsconfig.tsbuildinfo
+
+# Anchor / Rust build output (the optional escrow add-on) — scoped so the repo-root demo target/ is kept
+**/escrow/target/
+.anchor/
+test-ledger/
+
+# Secrets — students fill these in themselves
+.env
+.env.local
+*.key
+*.pem
+buyer-keypair.json
+seller-keypair.json
+
+# Locks (students generate on npm install)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lock
+bun.lockb
+
+# Misc
+*.log
+coverage*.json
+.vercel
+
+# Reference repos cloned for analysis (not part of project)
+ref/
+
+# Generated wallet addresses (user-specific)
+WALLETS.txt
+
+# Strix run output (live-mode assessment artifacts)
+strix_runs/
+
+# The demo publishes a fresh authz nonce into this file at runtime — keep the placeholder, ignore runs
+target/.well-known/auditmesh-authz.local.txt
+
+# Strix sandbox download intermediates (regenerable; the loaded docker image is the artifact)
+strix-oci/
+strix-oci.tar
+.venv-strix/
+
+# Live Strix scan status (written at runtime for the dashboard)
+.scan-status.json

@@ -1,0 +1,76 @@
+# AuditMesh — coral-server (the MCP coordinator) + the bundled, self-hosted target, on one network.
+#
+#   docker-compose -f docker-compose.auditmesh.yml up -d
+#
+# coral-server launches the buyer + seller persona containers per session via the mounted docker.sock.
+# juice-shop is the deliberately-vulnerable target; target-frontdoor serves the domain-control token at
+# /.well-known/auditmesh-authz.txt and reverse-proxies the app (published on host :8899).
+#
+# NETWORK NOTE: agents spawned by coral must be able to reach the target. On a shared docker network
+# they resolve `http://target-frontdoor`. If your coral-server attaches spawned agents to a different
+# network, set AUDIT_TARGET=http://host.docker.internal:8899 in .env (that origin is allowlisted) — the
+# front-door is published on the host at :8899.
+
+networks:
+  auditmesh:
+    name: auditmesh
+    driver: bridge
+
+services:
+
+  # ── CoralOS — the MCP coordinator (spawns buyer + seller persona containers) ──
+  coral:
+    image: ghcr.io/coral-protocol/coral-server:latest@sha256:2acd1701aed63367583b4ff4496d3a4255112f7363b4daae7c3a700acf35c6eb
+    container_name: coral
+    networks: [auditmesh]
+    ports:
+      - "5555:5555"
+    environment:
+      - CONFIG_FILE_PATH=/config/coral.toml
+      # Forwarded as fallbacks to the agents coral launches (start-audit.ts also passes these per-agent):
+      - SELLER_WALLET=${WALLET}
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      - BUYER_KEYPAIR_B58=${BUYER_KEYPAIR_B58}
+      - ARBITER_KEYPAIR_B58=${ARBITER_KEYPAIR_B58}
+      - BUYER_MAX_SOL=${BUYER_MAX_SOL:-0.02}
+      - AUDIT_TARGET=${AUDIT_TARGET:-http://target-frontdoor}
+      - AUTHZ_NONCE=${AUTHZ_NONCE:-}
+      - REPORT_SOURCE=${REPORT_SOURCE:-prebaked}
+      - SCAN_MODE=${SCAN_MODE:-quick}
+      - STRIX_LLM=${STRIX_LLM:-anthropic/claude-sonnet-4-6}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - VENICE_API_KEY=${VENICE_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - SETTLEMENT_MODE=${SETTLEMENT_MODE:-arbiter}
+      - TRACE=${TRACE:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./examples/txodds/coral/coral.toml:/config/coral.toml:ro
+      - ./coral-agents:/agents:ro
+    restart: unless-stopped
+
+  # ── The bundled target — OWASP Juice Shop (deliberately vulnerable) ──
+  juice-shop:
+    image: bkimminich/juice-shop
+    container_name: juice-shop
+    networks: [auditmesh]
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  # ── The front-door — serves the /.well-known authz token + proxies the app ──
+  target-frontdoor:
+    image: nginx:1.27-alpine
+    container_name: target-frontdoor
+    networks: [auditmesh]
+    depends_on:
+      - juice-shop
+    ports:
+      - "8899:80"
+    volumes:
+      - ./target/frontdoor/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./target/.well-known/auditmesh-authz.txt:/etc/auditmesh/auditmesh-authz.txt:ro
+    restart: unless-stopped

@@ -1,0 +1,31 @@
+{
+  "name": "auditmesh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AuditMesh — an autonomous agent-to-agent security-audit marketplace on CoralOS, settled on Solana devnet with on-chain-enforced consent. `npm run demo` runs the full market; `npm run smoke` runs the flow off-chain. Forked from the Solana × CoralOS starter (the World Cup oracle demo remains under npm run dev).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "npm install --prefix scripts && node scripts/setup.js",
+    "packages": "node scripts/build-packages.mjs",
+    "smoke": "npm install --prefix scripts >/dev/null 2>&1 && node scripts/smoke-auditmesh.mjs",
+    "demo": "node scripts/demo.mjs",
+    "setup:strix": "node scripts/setup-strix.mjs",
+    "scan:live": "node scripts/run-strix-live.mjs",
+    "auditmesh:build": "bash build-audit-agents.sh",
+    "auditmesh:up": "docker compose -f docker-compose.auditmesh.yml up -d",
+    "auditmesh:down": "docker compose -f docker-compose.auditmesh.yml down",
+    "dev": "node scripts/txodds.js",
+    "demo:coral": "node scripts/run-example.js examples/txodds coral",
+    "marketplace": "node scripts/run-example.js examples/marketplace start",
+    "marketplace:web": "node scripts/run-example.js examples/marketplace/web dev",
+    "agent-economy": "node scripts/run-example.js examples/agent-economy/autonomous start",
+    "agent-economy:bridge": "node scripts/run-example.js examples/agent-economy/bridge start",
+    "agent-economy:quickstart": "node scripts/run-example.js examples/agent-economy/quickstart server",
+    "agent-economy:quickstart:buyer": "node scripts/run-example.js examples/agent-economy/quickstart buyer",
+    "agent-economy:web": "node scripts/run-example.js examples/agent-economy/web dev",
+    "scan:broker": "node scripts/scan-broker.mjs"
+  }
+}

@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+strix_runs
+strix-oci
+strix-oci.tar
+.venv-strix
+.git
+reports/live-report.json
+WALLETS.txt
+.env

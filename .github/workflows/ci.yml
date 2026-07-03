@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  runtime:
+    name: Agent runtime (packages/agent-runtime)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - run: cd packages/agent-runtime && npm install
+      - run: cd packages/agent-runtime && npm run typecheck
+      - run: cd packages/agent-runtime && npm test
+
+  txodds:
+    name: TxODDS World Cup Oracle (typecheck + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Build the runtime (the example needs its dist)
+        run: cd packages/agent-runtime && npm install && npm run build
+      - name: txodds (typecheck + tests)
+        run: cd examples/txodds && npm install && npm run typecheck && npm test
+
+  escrow:
+    name: Escrow + arbiter contracts (Rust compile check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/txodds/escrow
+      # `cargo check` compiles both Anchor programs (escrow + arbiter) on the host toolchain — enough to
+      # catch a broken settlement spine on every push without the full Solana/Anchor SBF build. The demo
+      # runs against the already-deployed devnet program ids, so a redeploy isn't part of CI.
+      - name: cargo check (escrow + arbiter)
+        run: cd examples/txodds/escrow && cargo check --workspace
