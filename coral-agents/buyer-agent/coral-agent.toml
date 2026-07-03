@@ -1,0 +1,40 @@
+# Agent manifest — coral-server reads this to discover, launch, and configure the agent.
+# Docs: https://docs.coralos.ai/reference/agent · [options] table
+# https://docs.coralos.ai/reference/agent/tables/options · docker runtime
+# https://docs.coralos.ai/reference/agent/tables/runtimes/docker · whole-kit walkthrough /CORAL.md
+edition = 4
+
+[agent]
+name = "buyer-agent"
+version = "0.1.0"
+description = "LLM-driven marketplace buyer. Broadcasts a WANT, collects competing bids, picks best value, and settles via arbiter-gated escrow."
+summary = "Autonomous TypeScript buyer that runs an open TxODDS market and settles through a neutral arbiter."
+readme = "Market loop: WANT -> collect BIDs -> AWARD best value -> open arbiter escrow -> release on verified delivery."
+
+[agent.license]
+type = "spdx"
+expression = "MIT"
+
+[options]
+BUYER_KEYPAIR_B58 = { type = "string", description = "Base58-encoded devnet keypair - signs deposit/release" }
+ARBITER_KEYPAIR_B58 = { type = "string", default = "", description = "Base58-encoded neutral arbiter keypair for arbiter settlement" }
+AGENT_NAME = { type = "string", default = "buyer-agent", description = "Market identity (matches the registry name)" }
+SELLER_WALLET = { type = "string", default = "", description = "Expected seller payout wallet - the buyer binds the escrow seller= to it before depositing (F3)" }
+BUYER_MAX_SOL = { type = "f64", default = 0.001, description = "Budget cap per round (the WANT budget)" }
+BUYER_SERVICE = { type = "string", default = "txline", description = "Service to shop for (sellers self-select on it)" }
+BUYER_ARG = { type = "string", default = "edge 18175397", description = "Argument passed to the winning seller's deliverService" }
+BUYER_ARGS = { type = "string", default = "", description = "Comma-separated args to rotate through, one per round (overrides BUYER_ARG)" }
+MARKET_SELLERS = { type = "string", default = "seller-worldcup,seller-fast,seller-premium", description = "Comma-separated seller names in the market thread" }
+BID_WINDOW_MS = { type = "f64", default = 5000, description = "How long to collect competing bids each round" }
+CYCLE_INTERVAL_MS = { type = "f64", default = 30000, description = "Delay between market rounds" }
+SOLANA_RPC_URL = { type = "string", default = "", description = "Solana RPC URL (devnet)" }
+SETTLEMENT_MODE = { type = "string", default = "arbiter", description = "arbiter (default) | direct legacy base escrow" }
+ANTHROPIC_API_KEY = { type = "string", default = "", description = "Anthropic key (default brain for best-value selection)" }
+OPENAI_API_KEY = { type = "string", default = "", description = "OpenAI key - set with LLM_PROVIDER=openai to flip the brain" }
+VENICE_API_KEY = { type = "string", default = "", description = "Venice AI key (OpenAI-compatible, free credits) - set with LLM_PROVIDER=venice to flip the brain" }
+LLM_PROVIDER = { type = "string", default = "", description = "anthropic (default) | openai | venice" }
+LLM_MODEL = { type = "string", default = "", description = "Override the LLM model id" }
+TRACE = { type = "string", default = "", description = "Set to 1 to log CoralOS calls + on-chain steps (Explorer links)" }
+
+[runtimes.docker]
+image = "buyer-agent:0.1.0"

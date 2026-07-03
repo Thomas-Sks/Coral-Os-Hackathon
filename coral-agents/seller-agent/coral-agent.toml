@@ -1,0 +1,38 @@
+# Agent manifest — coral-server reads this to discover, launch, and configure the agent.
+# Docs: https://docs.coralos.ai/reference/agent · [options] table
+# https://docs.coralos.ai/reference/agent/tables/options · docker runtime
+# https://docs.coralos.ai/reference/agent/tables/runtimes/docker · whole-kit walkthrough /CORAL.md
+edition = 4
+
+[agent]
+name = "seller-agent"
+version = "0.1.0"
+description = "TxODDS marketplace seller. Bids on txline WANTs, verifies arbiter-funded escrow, and delivers a fair-line read."
+summary = "TypeScript TxODDS seller that competes in CoralOS and settles through arbiter-gated escrow."
+readme = "Bids in the shared market thread (WANT -> BID), issues ESCROW_REQUIRED with settlement=arbiter, verifies the funded vault escrow on DEPOSITED, then delivers the TxODDS read."
+
+[agent.license]
+type = "spdx"
+expression = "MIT"
+
+[options]
+SELLER_WALLET = { type = "string", description = "Devnet wallet pubkey that receives payments" }
+AGENT_NAME = { type = "string", default = "seller-agent", description = "Market identity for this seller persona" }
+SERVICES = { type = "string", default = "txline", description = "Inventory; the TxODDS demo uses txline" }
+FLOOR_SOL = { type = "f64", default = 0.0005, description = "Minimum bid in SOL" }
+PERSONA = { type = "string", default = "a TxODDS specialist selling verified fair-line reads", description = "Bidding persona" }
+SERVICE = { type = "string", default = "txline", description = "Delivery service; only txline is routed" }
+SOLANA_RPC_URL = { type = "string", default = "", description = "Solana RPC URL" }
+SETTLEMENT_MODE = { type = "string", default = "arbiter", description = "arbiter (default) | direct legacy base escrow" }
+ESCROW_DEADLINE_SECS = { type = "f64", default = 600, description = "Refund deadline for escrow deposits (seconds)" }
+TXLINE_API_KEY = { type = "string", default = "", description = "Activated TxLINE API token" }
+TXLINE_BASE_URL = { type = "string", default = "", description = "Override the TxLINE host" }
+ANTHROPIC_API_KEY = { type = "string", default = "", description = "Anthropic key for live reads" }
+OPENAI_API_KEY = { type = "string", default = "", description = "OpenAI key; set LLM_PROVIDER=openai to use it" }
+VENICE_API_KEY = { type = "string", default = "", description = "Venice AI key (OpenAI-compatible, free credits); set LLM_PROVIDER=venice to use it" }
+LLM_PROVIDER = { type = "string", default = "", description = "anthropic (default) | openai | venice" }
+LLM_MODEL = { type = "string", default = "", description = "Override the LLM model id" }
+TRACE = { type = "string", default = "", description = "Set to 1 to log settlement checks" }
+
+[runtimes.docker]
+image = "seller-agent:0.1.0"
