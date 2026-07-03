@@ -18,7 +18,7 @@ expression = "MIT"
 SELLER_WALLET = { type = "string", description = "Devnet wallet pubkey that receives payment on release" }
 AGENT_NAME = { type = "string", default = "audit-seller", description = "Market identity for this seller persona" }
 STRATEGY = { type = "string", default = "premium", description = "discount | specialist | premium — pricing + whether it declines out-of-lane jobs" }
-FLOOR_SOL = { type = "f64", default = 0.004, description = "Cost floor in SOL — the seller never bids below it" }
+FLOOR_SOL = { type = "f64", default = 0.006, description = "Cost floor in SOL — the seller never bids below it" }
 OFFERED_CATEGORIES = { type = "string", default = "", description = "Test families this persona covers (csv of short codes hdr,tls,inj,xss,auth,ac,data,dep,biz). Empty = all" }
 PERSONA = { type = "string", default = "a security assessment seller competing in an autonomous marketplace", description = "Bidding persona (LLM system prompt)" }
 SETTLEMENT_MODE = { type = "string", default = "arbiter", description = "arbiter (default) | direct legacy base escrow" }
@@ -42,6 +42,10 @@ LLM_MODEL = { type = "string", default = "", description = "Override the bidding
 TRACE = { type = "string", default = "", description = "Set to 1 to log market + consent + settlement steps" }
 
 SCAN_BROKER_URL = { type = "string", default = "", description = "Host scan-broker URL — the winner delegates the real Strix scan here (REPORT_SOURCE=live)" }
+
+SCAN_EFFICIENCY = { type = "f64", default = 1.0, description = "Token-efficiency of this persona's engine (lower = leaner = cheaper scan)" }
+SOL_EUR = { type = "f64", default = 71, description = "SOL price in EUR — basis for converting scan cost to a SOL price" }
+LLM_EUR_PER_MTOKEN = { type = "f64", default = 0.2, description = "Blended LLM price in EUR per million tokens (DeepSeek ≈ 0.2)" }
 
 [runtimes.docker]
 image = "audit-seller:0.1.0"

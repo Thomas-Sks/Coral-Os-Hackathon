@@ -18,10 +18,18 @@ import {
   decodeScopeArg,
   ALL_TEST_CATEGORIES,
   TEST_CATEGORY_LABEL,
+  estimateScanCost,
+  priceFromCost,
+  MARGIN_BY_STRATEGY,
   type TestCategory,
+  type ScanMode,
 } from '@auditmesh/shared'
 
 export type Strategy = 'discount' | 'specialist' | 'premium'
+
+// Market-wide economics, injected via env so the whole session shares one basis.
+const SOL_EUR = Number(process.env.SOL_EUR ?? '71')
+const LLM_EUR_PER_MTOKEN = Number(process.env.LLM_EUR_PER_MTOKEN ?? '0.2') // DeepSeek blended
 
 export interface SellerConfig {
   name: string
@@ -30,6 +38,10 @@ export interface SellerConfig {
   offeredCategories: TestCategory[]
   /** How it prices + whether it declines out-of-lane jobs. */
   strategy: Strategy
+  /** Scan depth this persona delivers — drives its token cost (quick | standard | deep). */
+  scanMode: ScanMode
+  /** Token-efficiency multiplier of this persona's engine (lower = leaner). */
+  efficiency: number
   /** LLM system-prompt persona text. */
   persona: string
 }
@@ -55,11 +67,14 @@ function parseCategories(raw: string | undefined): TestCategory[] {
 /** Build the persona from env (set per persona in coral-agent.toml). */
 export function sellerConfigFromEnv(name: string): SellerConfig {
   const strategy = (process.env.STRATEGY ?? 'premium').toLowerCase() as Strategy
+  const mode = (process.env.SCAN_MODE ?? 'quick').toLowerCase()
   return {
     name,
-    floorSol: Number(process.env.FLOOR_SOL ?? '0.004'),
+    floorSol: Number(process.env.FLOOR_SOL ?? '0.006'),
     offeredCategories: parseCategories(process.env.OFFERED_CATEGORIES),
     strategy: ['discount', 'specialist', 'premium'].includes(strategy) ? strategy : 'premium',
+    scanMode: (['quick', 'standard', 'deep'].includes(mode) ? mode : 'quick') as ScanMode,
+    efficiency: Number(process.env.SCAN_EFFICIENCY ?? '1'),
     persona:
       process.env.PERSONA ??
       'a security assessment seller competing in an autonomous marketplace',
@@ -89,58 +104,56 @@ export async function decideBid(
   }
   if (covered.length === 0) return { bid: false, priceSol: 0, note: 'no covered categories' }
 
-  const wantLabels = effective.map((c) => TEST_CATEGORY_LABEL[c]).join(', ')
-  const system =
-    `You are ${cfg.name}, ${cfg.persona}. You sell website security assessments and you are competing ` +
-    `against other sellers for this job. Decide whether to bid and at what price in SOL. Your cost ` +
-    `floor is ${cfg.floorSol} SOL — never below it; the buyer's budget caps the price. A ${cfg.strategy} ` +
-    `seller prices ` + priceGuidance(cfg.strategy) +
-    `. In "note", make a short persuasive PITCH (one sentence, under 20 words) arguing why the buyer ` +
-    `should pick YOU over rivals — lean on your edge (price, focus, or depth). ` +
-    `Reply ONLY with JSON: {"bid": boolean, "price": number, "note": string}.`
-  const user =
-    `service=${want.service} requested_scope=[${wantLabels}] budget=${want.budgetSol} floor=${cfg.floorSol} ` +
-    `covered=${covered.length}/${effective.length}`
+  // Dynamic COGS: estimate the tokens Strix will burn on THIS site at THIS depth, then price it.
+  const { costEur, expectedTokens } = estimateScanCost({
+    mode: cfg.scanMode,
+    surface: want.surface,
+    efficiency: cfg.efficiency,
+    llmEurPerMToken: LLM_EUR_PER_MTOKEN,
+  })
+  const breakEvenSol = round4(costEur / SOL_EUR)
+  if (breakEvenSol > want.budgetSol) {
+    return { bid: false, priceSol: 0, note: `budget below scan cost (~${breakEvenSol} SOL) for ${cfg.scanMode} depth` }
+  }
+  const margin = MARGIN_BY_STRATEGY[cfg.strategy] ?? 2.4
+  const priceSol = priceFromCost({ costEur, margin, solEur: SOL_EUR, floorSol: cfg.floorSol, budgetSol: want.budgetSol })
 
-  let proposed: number | undefined
+  // The PRICE is the deterministic cost estimate above; the LLM only writes the pitch (and may decline).
+  const wantLabels = effective.map((c) => TEST_CATEGORY_LABEL[c]).join(', ')
+  const siteDesc = want.surface
+    ? `${want.surface.pages} pages / ${want.surface.forms} forms / ${want.surface.endpoints} endpoints`
+    : 'unspecified size'
+  const system =
+    `You are ${cfg.name}, ${cfg.persona}. You sell website security assessments and compete against ` +
+    `other sellers. Your price for THIS job is already set at ${priceSol} SOL — it covers your real scan ` +
+    `cost (a ${cfg.scanMode} scan of a ${siteDesc} site, ~${(expectedTokens / 1e6).toFixed(1)}M LLM tokens). ` +
+    `Decide only whether to bid (yes if it fits your lane), and write a short persuasive PITCH (one ` +
+    `sentence, under 20 words) for why the buyer should pick YOU — lean on your edge (price, focus, depth). ` +
+    `Reply ONLY with JSON: {"bid": boolean, "note": string}.`
+  const user =
+    `service=${want.service} requested_scope=[${wantLabels}] your_price=${priceSol} depth=${cfg.scanMode} ` +
+    `site=[${siteDesc}] est_tokens=${(expectedTokens / 1e6).toFixed(1)}M covered=${covered.length}/${effective.length}`
+
   let note = ''
   try {
-    const parsed = parseJsonReply<{ bid?: boolean; price?: number; note?: string }>(
-      await llm({ system, user, maxTokens: 200 }),
+    const parsed = parseJsonReply<{ bid?: boolean; note?: string }>(
+      await llm({ system, user, maxTokens: 160 }),
     )
     if (parsed) {
       if (parsed.bid === false) {
         return { bid: false, priceSol: 0, note: (parsed.note ?? 'declined').slice(0, 140) }
       }
-      proposed = typeof parsed.price === 'number' ? parsed.price : undefined
       note = (parsed.note ?? '').slice(0, 140)
     }
   } catch {
-    // LLM unavailable → deterministic fallback below (strategy-anchored price within bounds).
+    // LLM unavailable → keep the cost-based price and a deterministic note.
   }
 
-  const anchor = fallbackPrice(cfg, want.budgetSol)
-  const priceSol = clamp(proposed ?? anchor, cfg.floorSol, want.budgetSol)
   return {
     bid: true,
     priceSol: round4(priceSol),
     note: note || defaultNote(cfg.strategy, covered.length),
   }
-}
-
-function priceGuidance(s: Strategy): string {
-  return s === 'discount'
-    ? 'near the floor for a fast, minimal-scope pass'
-    : s === 'specialist'
-      ? 'aggressively but profitably for a focused, expert config review'
-      : 'at a premium for the widest, deepest coverage'
-}
-
-/** Deterministic price anchor if the LLM is unavailable — keeps personas visibly distinct. */
-function fallbackPrice(cfg: SellerConfig, budget: number): number {
-  const span = Math.max(0, budget - cfg.floorSol)
-  const frac = cfg.strategy === 'discount' ? 0.1 : cfg.strategy === 'specialist' ? 0.45 : 0.8
-  return cfg.floorSol + span * frac
 }
 
 function defaultNote(s: Strategy, covered: number): string {
@@ -151,5 +164,4 @@ function defaultNote(s: Strategy, covered: number): string {
       : `full audit, ${covered} families`
 }
 
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 const round4 = (n: number) => Math.round(n * 1e4) / 1e4

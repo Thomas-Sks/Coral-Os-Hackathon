@@ -36,8 +36,17 @@ import {
 import { payoutMatches } from './guard.js'
 
 const RPC = process.env.SOLANA_RPC_URL ?? 'https://api.devnet.solana.com'
-const BUDGET = Number(process.env.BUYER_MAX_SOL ?? '0.02')
+const BUDGET = Number(process.env.BUYER_MAX_SOL ?? '0.08')
 const TARGET = process.env.AUDIT_TARGET ?? 'http://target-frontdoor'
+// The buyer already knows its own site (it profiled it before requesting the audit — discovering it is
+// not this market's job). It advertises that profile so sellers can size the scan and price dynamically.
+// `AUDIT_SURFACE` = pages,forms,endpoints[,params]. Default ≈ the bundled Juice Shop.
+const SURFACE = (() => {
+  const [pages, forms, endpoints, params] = (process.env.AUDIT_SURFACE ?? '30,8,40,120')
+    .split(',').map((n) => Number(n.trim()))
+  if (![pages, forms, endpoints].every((n) => Number.isFinite(n))) return undefined
+  return { pages, forms, endpoints, ...(Number.isFinite(params) ? { params } : {}) }
+})()
 const NONCE = process.env.AUTHZ_NONCE ?? '' // the token published at the target's /.well-known
 // Rotate scope requests so consecutive rounds differ and different personas win (short codes joined by +).
 const SCOPES = (process.env.AUDIT_SCOPES || 'hdr+tls,hdr+tls+xss+inj+ac+data,hdr+tls+xss')
@@ -126,8 +135,8 @@ await startCoralAgent({ agentName: process.env.AGENT_NAME ?? 'audit-buyer' }, as
       const scopeLabels = categories.join(', ')
       const arg = encodeScopeArg(categories) // canonicalize
       const correlationId = `am-r${round}-${(NONCE || 'nononce').slice(0, 8)}`
-      log.event('want', { round, scope: scopeLabels, budget: BUDGET })
-      await ctx.send(formatWant({ round, service: AUDIT_SERVICE, arg, budgetSol: BUDGET }), thread, SELLERS)
+      log.event('want', { round, scope: scopeLabels, budget: BUDGET, surface: SURFACE })
+      await ctx.send(formatWant({ round, service: AUDIT_SERVICE, arg, budgetSol: BUDGET, ...(SURFACE ? { surface: SURFACE } : {}) }), thread, SELLERS)
 
       // -- collect competing bids during the window --------------------------
       const bids: Bid[] = []

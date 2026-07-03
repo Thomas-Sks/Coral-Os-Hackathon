@@ -16,6 +16,8 @@ const cfg = (over: Partial<SellerConfig> = {}): SellerConfig => ({
   floorSol: 0.004,
   offeredCategories: ['security-headers', 'tls-config'],
   strategy: 'premium',
+  scanMode: 'quick',
+  efficiency: 1,
   persona: 'test persona',
   ...over,
 })
@@ -60,15 +62,15 @@ describe('decideBid — hard guards (no LLM call)', () => {
   })
 })
 
-describe('decideBid — price enforcement (model proposes, code disposes)', () => {
-  it('clamps a below-floor proposal up to the floor', async () => {
-    const d = await decideBid(want(), cfg({ floorSol: 0.004 }), fakeLlm(true, 0.0001))
+describe('decideBid — dynamic cost-based price (COGS = Strix tokens; code disposes)', () => {
+  it('never prices below the floor', async () => {
+    const d = await decideBid(want({ budgetSol: 0.08 }), cfg({ floorSol: 0.03, scanMode: 'quick' }), fakeLlm(true, 0))
     expect(d.bid).toBe(true)
-    expect(d.priceSol).toBeGreaterThanOrEqual(0.004)
+    expect(d.priceSol).toBeGreaterThanOrEqual(0.03)
   })
 
-  it('clamps an over-budget proposal down to the budget', async () => {
-    const d = await decideBid(want({ budgetSol: 0.02 }), cfg(), fakeLlm(true, 999))
+  it('never prices above the budget (caps the cost-based price)', async () => {
+    const d = await decideBid(want({ budgetSol: 0.02 }), cfg({ strategy: 'premium', scanMode: 'deep' }), fakeLlm(true, 0))
     expect(d.priceSol).toBeLessThanOrEqual(0.02)
   })
 
@@ -77,14 +79,27 @@ describe('decideBid — price enforcement (model proposes, code disposes)', () =
     expect(d.bid).toBe(false)
   })
 
-  it('falls back to a strategy-anchored in-bounds price when the LLM is unavailable', async () => {
-    const discount = await decideBid(want(), cfg({ strategy: 'discount', floorSol: 0.002 }), brokenLlm)
-    const premium = await decideBid(want(), cfg({ strategy: 'premium', floorSol: 0.002 }), brokenLlm)
-    expect(discount.bid && premium.bid).toBe(true)
-    expect(discount.priceSol).toBeGreaterThanOrEqual(0.002)
-    expect(premium.priceSol).toBeLessThanOrEqual(0.02)
-    // premium prices above discount for the same budget/floor
-    expect(premium.priceSol).toBeGreaterThan(discount.priceSol)
+  it('prices deeper scans above shallower ones (depth drives token cost)', async () => {
+    const quick = await decideBid(want({ budgetSol: 0.08 }), cfg({ floorSol: 0.001, scanMode: 'quick' }), brokenLlm)
+    const deep = await decideBid(want({ budgetSol: 0.08 }), cfg({ floorSol: 0.001, scanMode: 'deep' }), brokenLlm)
+    expect(quick.bid && deep.bid).toBe(true)
+    expect(deep.priceSol).toBeGreaterThan(quick.priceSol)
+  })
+
+  it('scales the price with the target attack surface', async () => {
+    const small = await decideBid(want({ budgetSol: 0.5, surface: { pages: 3, forms: 1, endpoints: 2 } }), cfg({ floorSol: 0.001, scanMode: 'deep' }), brokenLlm)
+    const big = await decideBid(want({ budgetSol: 0.5, surface: { pages: 200, forms: 40, endpoints: 300 } }), cfg({ floorSol: 0.001, scanMode: 'deep' }), brokenLlm)
+    expect(big.priceSol).toBeGreaterThan(small.priceSol)
+  })
+
+  it('declines when the scan cost exceeds the budget for that depth', async () => {
+    const d = await decideBid(
+      want({ budgetSol: 0.001, surface: { pages: 500, forms: 100, endpoints: 500 } }),
+      cfg({ floorSol: 0.0001, scanMode: 'deep' }),
+      fakeLlm(true, 0),
+    )
+    expect(d.bid).toBe(false)
+    expect(d.note).toMatch(/scan cost/)
   })
 })
 

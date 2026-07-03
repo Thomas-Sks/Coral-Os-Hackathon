@@ -18,7 +18,7 @@ AGENT_NAME = { type = "string", default = "audit-buyer", description = "Market i
 BUYER_KEYPAIR_B58 = { type = "string", description = "Buyer devnet secret (base58) — signs the escrow deposit/release AND the authorization payload" }
 ARBITER_KEYPAIR_B58 = { type = "string", default = "", description = "Neutral arbiter secret (base58) — gates release/refund when SETTLEMENT_MODE=arbiter" }
 SELLER_WALLET = { type = "string", default = "", description = "Expected payout wallet — the buyer refuses to deposit to a mismatched ESCROW_REQUIRED (binds the award to the payout)" }
-BUYER_MAX_SOL = { type = "f64", default = 0.02, description = "Budget ceiling per audit (code-enforced upper bound on bids)" }
+BUYER_MAX_SOL = { type = "f64", default = 0.08, description = "Budget ceiling per audit (code-enforced upper bound on bids)" }
 AUDIT_TARGET = { type = "string", default = "http://target-frontdoor", description = "The allowlisted target origin to assess (the bundled Juice Shop front-door)" }
 AUTHZ_NONCE = { type = "string", default = "", description = "The domain-control token published at <target>/.well-known/auditmesh-authz.txt (the harness generates + publishes it)" }
 AUDIT_SCOPES = { type = "string", default = "hdr+tls,hdr+tls+xss+inj+ac+data,hdr+tls+xss", description = "csv of per-round requested scopes (short codes joined by +); rotated so rounds differ and different personas win" }
@@ -39,6 +39,8 @@ LLM_MODEL = { type = "string", default = "", description = "Override the buyer's
 TRACE = { type = "string", default = "", description = "Set to 1 to log market + consent + settlement steps with Explorer links" }
 
 DELIVERED_WAIT_MS = { type = "f64", default = 1200000, description = "How long the buyer waits for DELIVERED (live per-round scans take minutes)" }
+
+AUDIT_SURFACE = { type = "string", default = "30,8,40,120", description = "Target attack-surface profile the buyer advertises (pages,forms,endpoints[,params]) so sellers price the scan dynamically" }
 
 [runtimes.docker]
 image = "audit-buyer:0.1.0"

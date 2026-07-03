@@ -16,7 +16,7 @@ expression = "MIT"
 [options]
 AGENT_NAME = { type = "string", default = "audit-premium", description = "Market identity for this persona" }
 STRATEGY = { type = "string", default = "premium", description = "discount | specialist | premium" }
-FLOOR_SOL = { type = "f64", default = 0.008, description = "Cost floor in SOL" }
+FLOOR_SOL = { type = "f64", default = 0.045, description = "Cost floor in SOL" }
 OFFERED_CATEGORIES = { type = "string", default = "", description = "Test families covered (csv short codes; empty = all)" }
 PERSONA = { type = "string", default = "a full-audit premium shop. Your offer is the DEEPEST scan available (deep mode) across the full scope the buyer authorizes, and you bid on the broadest jobs the others decline. You do NOT promise families outside what the buyer requests — you promise depth and coverage of whatever scope is granted. Justify the premium with that depth and your willingness to take any authorized scope.", description = "Bidding persona (states the concrete deliverable)" }
 SELLER_WALLET = { type = "string", default = "", description = "Devnet wallet pubkey that receives payment on release" }
@@ -41,6 +41,10 @@ LLM_MODEL = { type = "string", default = "", description = "Override the bidding
 TRACE = { type = "string", default = "", description = "Set to 1 to log market + consent + settlement steps" }
 
 SCAN_BROKER_URL = { type = "string", default = "", description = "Host scan-broker URL — the winner delegates the real Strix scan here (REPORT_SOURCE=live)" }
+
+SCAN_EFFICIENCY = { type = "f64", default = 1.05, description = "Token-efficiency of this persona's engine (lower = leaner = cheaper scan)" }
+SOL_EUR = { type = "f64", default = 71, description = "SOL price in EUR — basis for converting scan cost to a SOL price" }
+LLM_EUR_PER_MTOKEN = { type = "f64", default = 0.2, description = "Blended LLM price in EUR per million tokens (DeepSeek ≈ 0.2)" }
 
 [runtimes.docker]
 image = "audit-seller:0.1.0"
