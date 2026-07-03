@@ -13,11 +13,25 @@
  *   (then DELIVERED / RELEASED / REFUNDED reuse the round tag)
  */
 
+/**
+ * The target's attack-surface profile — supplied by the buyer, which already knows its own site
+ * (it profiled it before requesting the audit; discovering it is not this market's job). Sellers use
+ * it to estimate the scan's token cost and price dynamically, so the bid scales with the real job size.
+ */
+export interface SurfaceProfile {
+  pages: number
+  forms: number
+  endpoints: number
+  params?: number
+}
+
 export interface Want {
   round: number
   service: string
   arg: string
   budgetSol: number
+  /** Optional target profile the buyer advertises so sellers can size the job. */
+  surface?: SurfaceProfile
 }
 
 export interface Bid {
@@ -68,8 +82,27 @@ export function messageRound(text: string): number | undefined {
 }
 
 // -- WANT ----------------------------------------------------------------------
+/** Encode a surface profile into one whitespace-free token: `pages:30,forms:8,endpoints:40,params:120`. */
+export function encodeSurface(s: SurfaceProfile): string {
+  const parts = [`pages:${s.pages}`, `forms:${s.forms}`, `endpoints:${s.endpoints}`]
+  if (s.params != null) parts.push(`params:${s.params}`)
+  return parts.join(',')
+}
+export function decodeSurface(token: string | undefined): SurfaceProfile | undefined {
+  if (!token) return undefined
+  const get = (k: string) => {
+    const m = token.match(new RegExp(`${k}:(\\d+)`))
+    return m ? Number(m[1]) : undefined
+  }
+  const pages = get('pages'), forms = get('forms'), endpoints = get('endpoints')
+  if (pages == null || forms == null || endpoints == null) return undefined
+  const params = get('params')
+  return { pages, forms, endpoints, ...(params != null ? { params } : {}) }
+}
+
 export function formatWant(w: Want): string {
-  return `WANT round=${w.round} service=${w.service} arg=${w.arg} budget=${w.budgetSol}`
+  const base = `WANT round=${w.round} service=${w.service} arg=${w.arg} budget=${w.budgetSol}`
+  return w.surface ? `${base} surface=${encodeSurface(w.surface)}` : base
 }
 export function parseWant(text: string): Want | null {
   if (verb(text) !== 'WANT') return null
@@ -78,7 +111,8 @@ export function parseWant(text: string): Want | null {
   const arg = tok(text, 'arg')
   const budgetSol = num(text, 'budget')
   if (round == null || !service || arg == null || budgetSol == null) return null
-  return { round, service, arg, budgetSol }
+  const surface = decodeSurface(tok(text, 'surface'))
+  return { round, service, arg, budgetSol, ...(surface ? { surface } : {}) }
 }
 
 // -- BID -----------------------------------------------------------------------

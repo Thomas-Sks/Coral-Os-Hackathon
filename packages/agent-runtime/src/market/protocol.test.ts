@@ -14,6 +14,13 @@ describe('WANT round-trip', () => {
   it('rejects a non-WANT', () => {
     expect(parseWant('BID round=7 price=0.0003 by=x')).toBeNull()
   })
+  it('round-trips an advertised surface profile', () => {
+    const w = { round: 3, service: 'audit', arg: 'hdr+tls', budgetSol: 0.08, surface: { pages: 30, forms: 8, endpoints: 40, params: 120 } }
+    expect(parseWant(formatWant(w))).toEqual(w)
+  })
+  it('parses a WANT with no surface (backward compatible)', () => {
+    expect(parseWant('WANT round=1 service=audit arg=hdr+tls budget=0.08')).toEqual({ round: 1, service: 'audit', arg: 'hdr+tls', budgetSol: 0.08 })
+  })
 })
 
 describe('BID round-trip', () => {
