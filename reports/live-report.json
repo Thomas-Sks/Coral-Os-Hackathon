@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "correlationId": "live-172-20-10-2-8899_c86e",
+  "target": "http://localhost:8899",
+  "generatedAt": "2026-07-03T08:42:57.210Z",
+  "grantedScope": {
+    "categories": [
+      "security-headers",
+      "tls-config",
+      "injection",
+      "xss",
+      "access-control",
+      "sensitive-data"
+    ],
+    "exclusions": [
+      "/#/administration"
+    ],
+    "maxDepth": 2,
+    "maxDurationSeconds": 900,
+    "nonDestructive": true
+  },
+  "provenance": {
+    "source": "live",
+    "engine": "strix",
+    "engineModel": "deepseek/deepseek-chat",
+    "scanMode": "quick",
+    "runName": "172-20-10-2-8899_c86e"
+  },
+  "findings": [
+    {
+      "id": "vuln-0001",
+      "title": "SQL Injection in Login Endpoint Leading to Authentication Bypass",
+      "severity": "critical",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 9.8,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+      },
+      "cwe": "CWE-89",
+      "affectedComponent": "/rest/user/login",
+      "evidence": "The login endpoint at `/rest/user/login` does not sanitize or parameterize the email input field. By injecting `' OR 1=1--` after a valid email, the SQL query becomes: `SELECT * FROM Users WHERE email = 'admin@juice-sh.op' OR 1=1--' AND password = '...'`. The `OR 1=1` causes the WHERE clause to match all rows, and `--` comments out the password check. The server returns a valid JWT token for the first matching user (the admin, id:1) containing all user details including the password hash. The application runs on Express and uses Sequelize ORM with SQLite, confirming the vulnerability via error",
+      "remediation": "1. Use parameterized queries or prepared statements for all database operations\n2. Use Sequelize's parameterized query syntax instead of string concatenation\n3. Implement input validation and sanitization on all user-supplied input\n4. Apply the principle of least privilege to the database connection user\n5. Conduct a full security review of all query-building patterns in the codebase",
+      "tags": []
+    },
+    {
+      "id": "vuln-0007",
+      "title": "SQL Injection in Product Search Endpoint",
+      "severity": "critical",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 9.8,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+      },
+      "cwe": "CWE-89",
+      "affectedComponent": "/rest/products/search",
+      "evidence": "The search endpoint at `/rest/products/search?q=` takes a query parameter that is passed directly to a SQL LIKE clause. When a single quote is injected, the server responds with `SQLITE_ERROR: near \"'%'\": syntax error`, confirming that the input is not parameterized. The server error page also includes explicit stack traces pointing to the Express application internals.",
+      "remediation": "1. Use parameterized queries for all database operations\n2. Sanitize and validate the `q` parameter against expected input patterns\n3. Disable detailed error messages in production environments\n4. Use Sequelize's parameterized query syntax instead of string interpolation",
+      "tags": []
+    },
+    {
+      "id": "vuln-0002",
+      "title": "Sensitive Data Exposure via /rest/memories Endpoint Leaks User Password Hashes",
+      "severity": "high",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 7.5,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": "CWE-200",
+      "affectedComponent": "/rest/memories",
+      "evidence": "The `/rest/memories` endpoint (serving the Photo Wall feature) executes a query that includes the User association with full user data. The Sequelize ORM eagerly loads the related User model including the `password` field. The API does not strip sensitive fields before returning the response. The password hashes (MD5) were confirmed: admin (bjoern.kimminich@gmail.com): `6edd9d726cbdc873c539e41ae8757b8c`, bjoern@owasp.org: `9283f1b2e9669749081963be0462e466`, etc. Additionally, the `/api/Users` endpoint (visible only after SQL injection) shows that the Users table stores passwords as MD5 hashes ",
+      "remediation": "1. Exclude the `password` field from API responses using Sequelize field selection or attribute exclusions\n2. Use a strong, salted hashing algorithm (bcrypt, Argon2) instead of MD5 for password storage\n3. Implement proper authentication checks on the `/rest/memories` endpoint\n4. Apply the principle of least data exposure and review all API response schemas",
+      "tags": []
+    },
+    {
+      "id": "vuln-0004",
+      "title": "Sensitive Data Exposure - Directory Listing Enabled on /ftp/ Endpoint",
+      "severity": "high",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 7.5,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": "CWE-548",
+      "affectedComponent": "/ftp/",
+      "evidence": "The Express server has directory listing enabled for the `/ftp` path. The `robots.txt` file lists `Disallow: /ftp` which ironically draws attention to it. The `.bak` files are protected by an extension filter (only `.md` and `.pdf` allowed), but a poison null byte bypass (`%2500.md`) was used to read `package.json.bak`, `coupons_2013.md.bak`, and other files. The `incident-support.kdbx` file (3246 bytes) is a KeePass database that could be cracked offline.",
+      "remediation": "1. Disable directory listing on all server paths\n2. Remove or properly secure sensitive files (backups, config files, databases)\n3. Implement proper access controls for the `/ftp` directory\n4. Validate file extensions server-side before serving files, avoiding null byte injection\n5. Remove `robots.txt` entries that reveal hidden paths\n6. Move sensitive files outside the web root",
+      "tags": []
+    },
+    {
+      "id": "vuln-0005",
+      "title": "Missing Security Headers and Inconsistent CORS Configuration",
+      "severity": "high",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 7.2,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:N"
+      },
+      "cwe": "CWE-942",
+      "affectedComponent": "/ (all endpoints)",
+      "evidence": "Analysis of response headers shows: `Access-Control-Allow-Origin: *` (wildcard CORS), `X-Content-Type-Options: nosniff` (present but not the full protection offered by other missing headers), `X-Frame-Options: SAMEORIGIN`, `Feature-Policy: payment 'self'`. Missing headers include: `Content-Security-Policy`, `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy` (modern replacement for Feature-Policy), and no `Cache-Control` with proper directives for sensitive pages. The application is served over HTTP without HSTS.",
+      "remediation": "1. Implement a strict Content-Security-Policy header\n2. Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` once HTTPS is enabled\n3. Remove wildcard CORS (`Access-Control-Allow-Origin: *`) and restrict to specific trusted origins\n4. Add `Referrer-Policy: strict-origin-when-cross-origin`\n5. Replace `Feature-Policy` with `Permissions-Policy` with appropriate restrictions\n6. Add `Cache-Control: no-store` for sensitive pages",
+      "tags": []
+    },
+    {
+      "id": "vuln-0003",
+      "title": "Broken Access Control - Insecure Direct Object Reference (IDOR) on Basket API",
+      "severity": "medium",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 4.3,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N"
+      },
+      "cwe": "CWE-639",
+      "affectedComponent": "/rest/basket/:id",
+      "evidence": "The basket API endpoint at `/rest/basket/:id` retrieves basket data by the provided numeric ID without verifying ownership. By authenticating as admin (basket 1, user 1) and then accessing basket 2 (belongs to user 2), the API happily returns all basket contents including product names, quantities, and prices. The endpoint should be filtering by `UserId` from the JWT token, not solely by the URL parameter.",
+      "remediation": "1. Implement authorization checks in the basket endpoint to verify that the `UserId` in the basket record matches the authenticated user's ID from the JWT\n2. Use server-side session data rather than relying on client-provided IDs\n3. Apply consistent access control checks across all API endpoints that reference user-owned resources",
+      "tags": []
+    },
+    {
+      "id": "vuln-0006",
+      "title": "Exposed Metrics Endpoint Leaks Application Telemetry and Operational Data",
+      "severity": "medium",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 5.3,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+      },
+      "cwe": "CWE-200",
+      "affectedComponent": "/metrics",
+      "evidence": "The `/metrics` endpoint (also accessible at `/prometheus` which falls back to the Angular index) returns Prometheus-formatted metrics including: `juiceshop_startup_duration_seconds` (with task labels like `validateConfig`, `cleanupFtpFolder`, `datacreator`), `http_requests_count` (grouped by status code 2XX, 4XX, 5XX), `file_uploads_count`, `file_upload_errors`, `process_cpu_seconds_total`, and `juiceshop_llm_*` counters. This endpoint requires no authentication and exposes internal operational data.",
+      "remediation": "1. Restrict access to the `/metrics` endpoint with authentication\n2. If the endpoint should remain public, filter out sensitive internal details\n3. Use a firewall or reverse proxy rule to restrict access to trusted IPs only\n4. Remove LLM-specific metrics that reveal internal infrastructure details",
+      "tags": []
+    },
+    {
+      "id": "vuln-0008",
+      "title": "Verbose Error Handling Exposes Stack Traces and Internal Paths",
+      "severity": "medium",
+      "cvss": {
+        "version": "3.1",
+        "baseScore": 5.3,
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+      },
+      "cwe": "CWE-209",
+      "affectedComponent": "/ (multiple endpoints)",
+      "evidence": "When errors occur (e.g., invalid SQL syntax, missing parameters, unauthorized access), the error handler renders an HTML page with the error message and a `<ul id=\"stacktrace\">` containing stack frames with file paths like `/juice-shop/build/routes/angular.js:52:18`, `/juice-shop/node_modules/express/lib/router/index.js:328:13`, and `/juice-shop/build/lib/insecurity.js:218:5`. This was confirmed across multiple error conditions including SQL injection, unauthorized access, and captcha validation failures.",
+      "remediation": "1. Disable detailed error messages in production by setting `NODE_ENV=production`\n2. Implement a custom error handler that returns sanitized error messages without stack traces\n3. Log detailed errors server-side while returning generic messages to clients\n4. Remove the `errorhandler` middleware in production builds",
+      "tags": []
+    }
+  ],
+  "summary": {
+    "totalFindings": 8,
+    "bySeverity": {
+      "info": 0,
+      "low": 0,
+      "medium": 3,
+      "high": 3,
+      "critical": 2
+    },
+    "highestSeverity": "critical",
+    "headline": "8 findings — 2 critical, 3 high"
+  }
+}
