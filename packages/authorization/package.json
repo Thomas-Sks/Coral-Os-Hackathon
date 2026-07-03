@@ -1,0 +1,32 @@
+{
+  "name": "@auditmesh/authorization",
+  "version": "0.1.0",
+  "description": "AuditMesh on-chain-enforced consent — domain-control challenge, Solana-signed scoped grants, and the verifier that gates every scan and escrow release",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@auditmesh/shared": "file:../shared",
+    "@solana/web3.js": "^1.98.0",
+    "bs58": "^5.0.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
+    "vitest": "^1.6.0"
+  }
+}
