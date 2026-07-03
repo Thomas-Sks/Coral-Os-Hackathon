@@ -1,0 +1,46 @@
+# AuditMesh seller persona — reuses the audit-seller image; config only.
+# The comprehensive, higher-priced option.
+edition = 4
+
+[agent]
+name = "audit-premium"
+version = "0.1.0"
+description = "AuditMesh seller persona (premium). The comprehensive, higher-priced option."
+summary = "The comprehensive, higher-priced option."
+readme = "Reuses the audit-seller image (audit-seller:0.1.0). Declares the full seller option set so coral accepts the session options; the persona is STRATEGY/FLOOR_SOL/OFFERED_CATEGORIES/PERSONA below."
+
+[agent.license]
+type = "spdx"
+expression = "MIT"
+
+[options]
+AGENT_NAME = { type = "string", default = "audit-premium", description = "Market identity for this persona" }
+STRATEGY = { type = "string", default = "premium", description = "discount | specialist | premium" }
+FLOOR_SOL = { type = "f64", default = 0.008, description = "Cost floor in SOL" }
+OFFERED_CATEGORIES = { type = "string", default = "", description = "Test families covered (csv short codes; empty = all)" }
+PERSONA = { type = "string", default = "a full-audit premium shop. Your offer is the DEEPEST scan available (deep mode) across the full scope the buyer authorizes, and you bid on the broadest jobs the others decline. You do NOT promise families outside what the buyer requests — you promise depth and coverage of whatever scope is granted. Justify the premium with that depth and your willingness to take any authorized scope.", description = "Bidding persona (states the concrete deliverable)" }
+SELLER_WALLET = { type = "string", default = "", description = "Devnet wallet pubkey that receives payment on release" }
+SETTLEMENT_MODE = { type = "string", default = "arbiter", description = "arbiter | direct" }
+ESCROW_DEADLINE_SECS = { type = "f64", default = 600, description = "Refund deadline for escrow deposits (seconds)" }
+REPORT_SOURCE = { type = "string", default = "prebaked", description = "prebaked (replay real report) | live (run Strix)" }
+SCAN_MODE = { type = "string", default = "deep", description = "Strix scan depth: quick | standard | deep" }
+STRIX_LLM = { type = "string", default = "anthropic/claude-sonnet-4-6", description = "Strix engine model (provider/model)" }
+LLM_API_KEY = { type = "string", default = "", description = "API key handed to Strix (live mode)" }
+AUDIT_TARGET = { type = "string", default = "http://target-frontdoor", description = "Allowlisted target origin" }
+PREBAKED_REPORT_PATH = { type = "string", default = "/app/reports/prebaked-juice-shop.json", description = "Stored real Strix report for prebaked mode" }
+STRIX_RUNS_DIR = { type = "string", default = "/app/strix_runs", description = "Where a live Strix run writes output" }
+STRIX_TIMEOUT_SECONDS = { type = "f64", default = 900, description = "Hard wall-clock cap for a live Strix run" }
+DELIVERY_PACING_MS = { type = "f64", default = 1200, description = "Delay between delivery-graph stages (prebaked)" }
+SOLANA_RPC_URL = { type = "string", default = "", description = "Solana RPC URL (devnet)" }
+ANTHROPIC_API_KEY = { type = "string", default = "", description = "Anthropic key for the bidding LLM" }
+OPENAI_API_KEY = { type = "string", default = "", description = "OpenAI key" }
+VENICE_API_KEY = { type = "string", default = "", description = "Venice AI key" }
+DEEPSEEK_API_KEY = { type = "string", default = "", description = "DeepSeek key for the bidding LLM" }
+LLM_PROVIDER = { type = "string", default = "", description = "anthropic | openai | venice | deepseek" }
+LLM_MODEL = { type = "string", default = "", description = "Override the bidding LLM model id" }
+TRACE = { type = "string", default = "", description = "Set to 1 to log market + consent + settlement steps" }
+
+SCAN_BROKER_URL = { type = "string", default = "", description = "Host scan-broker URL — the winner delegates the real Strix scan here (REPORT_SOURCE=live)" }
+
+[runtimes.docker]
+image = "audit-seller:0.1.0"

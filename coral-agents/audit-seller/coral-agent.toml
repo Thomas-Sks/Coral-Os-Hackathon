@@ -1,0 +1,47 @@
+# Agent manifest — coral-server reads this to discover, launch, and configure the AuditMesh seller.
+# The three demo personas (audit-discounter / audit-tls-specialist / audit-premium) all REUSE this
+# agent's built image and differ only by the [options] each sets. Docs: https://docs.coralos.ai/reference/agent
+edition = 4
+
+[agent]
+name = "audit-seller"
+version = "0.1.0"
+description = "AuditMesh marketplace seller. Bids on `audit` WANTs, verifies the buyer's signed scoped authorization (live domain control), opens escrow bound to the authorization hash, runs a Strix assessment against the bundled allowlisted target, and delivers a structured vulnerability report."
+summary = "A security-assessment seller that competes in CoralOS, enforces on-chain consent, and settles through escrow."
+readme = "WANT->BID->AWARD->verify AUTHZ_GRANT->AUTHZ_RESULT->ESCROW_REQUIRED (reference bound to the authz hash)->DEPOSITED->deliver (recon/analysis/reporting via Strix, streaming DELIVERY_PROGRESS)->DELIVERED <report>. No valid, live, in-scope authorization ⇒ no work and no settlement."
+
+[agent.license]
+type = "spdx"
+expression = "MIT"
+
+[options]
+SELLER_WALLET = { type = "string", description = "Devnet wallet pubkey that receives payment on release" }
+AGENT_NAME = { type = "string", default = "audit-seller", description = "Market identity for this seller persona" }
+STRATEGY = { type = "string", default = "premium", description = "discount | specialist | premium — pricing + whether it declines out-of-lane jobs" }
+FLOOR_SOL = { type = "f64", default = 0.004, description = "Cost floor in SOL — the seller never bids below it" }
+OFFERED_CATEGORIES = { type = "string", default = "", description = "Test families this persona covers (csv of short codes hdr,tls,inj,xss,auth,ac,data,dep,biz). Empty = all" }
+PERSONA = { type = "string", default = "a security assessment seller competing in an autonomous marketplace", description = "Bidding persona (LLM system prompt)" }
+SETTLEMENT_MODE = { type = "string", default = "arbiter", description = "arbiter (default) | direct legacy base escrow" }
+ESCROW_DEADLINE_SECS = { type = "f64", default = 600, description = "Refund deadline for escrow deposits (seconds)" }
+REPORT_SOURCE = { type = "string", default = "prebaked", description = "prebaked (replay a real Strix report — deterministic demo) | live (run Strix now). Settlement is always live on devnet." }
+SCAN_MODE = { type = "string", default = "quick", description = "Strix scan depth: quick | standard | deep" }
+STRIX_LLM = { type = "string", default = "anthropic/claude-sonnet-4-6", description = "Strix engine model (provider/model)" }
+LLM_API_KEY = { type = "string", default = "", description = "API key handed to Strix (live mode)" }
+AUDIT_TARGET = { type = "string", default = "http://target-frontdoor", description = "The allowlisted target origin (the bundled Juice Shop front-door)" }
+PREBAKED_REPORT_PATH = { type = "string", default = "/app/reports/prebaked-juice-shop.json", description = "Stored real Strix report served in prebaked mode" }
+STRIX_RUNS_DIR = { type = "string", default = "/app/strix_runs", description = "Where a live Strix run writes its output" }
+STRIX_TIMEOUT_SECONDS = { type = "f64", default = 900, description = "Hard wall-clock cap for a live Strix run" }
+DELIVERY_PACING_MS = { type = "f64", default = 1200, description = "Delay between synthetic delivery-graph stages (prebaked) so the graph is watchable" }
+SOLANA_RPC_URL = { type = "string", default = "", description = "Solana RPC URL (devnet)" }
+ANTHROPIC_API_KEY = { type = "string", default = "", description = "Anthropic key for the bidding LLM" }
+OPENAI_API_KEY = { type = "string", default = "", description = "OpenAI key; set LLM_PROVIDER=openai to use it" }
+VENICE_API_KEY = { type = "string", default = "", description = "Venice AI key (OpenAI-compatible, free credits); set LLM_PROVIDER=venice to use it" }
+DEEPSEEK_API_KEY = { type = "string", default = "", description = "DeepSeek key (OpenAI-compatible); set LLM_PROVIDER=deepseek to use it for bidding" }
+LLM_PROVIDER = { type = "string", default = "", description = "anthropic (default) | openai | venice | deepseek — for the bidding LLM" }
+LLM_MODEL = { type = "string", default = "", description = "Override the bidding LLM model id" }
+TRACE = { type = "string", default = "", description = "Set to 1 to log market + consent + settlement steps" }
+
+SCAN_BROKER_URL = { type = "string", default = "", description = "Host scan-broker URL — the winner delegates the real Strix scan here (REPORT_SOURCE=live)" }
+
+[runtimes.docker]
+image = "audit-seller:0.1.0"
