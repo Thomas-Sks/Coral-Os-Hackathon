@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AuditMesh — Flow</title>
+<style>
+  :root{
+    --bg:#F5F6FB; --card:#FFFFFF; --ink:#15172A; --muted:#6B7185; --line:#E5E7F0;
+    --brand:#6D5EF6; --settle:#10B981;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#0B0D16; --card:#161A28; --ink:#ECEEF7; --muted:#A2A8BD; --line:#272C3D; --brand:#8F81FA; --settle:#34D399; }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font-family:var(--sans);padding:32px 18px;}
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:10px;max-width:960px;}
+  .node{
+    display:flex;flex-direction:column;gap:4px;justify-content:center;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px 18px;min-width:130px;text-align:center;
+    box-shadow:0 1px 2px rgba(17,19,40,.05);
+  }
+  .node .emoji{font-size:24px;line-height:1;}
+  .node .title{font-weight:700;font-size:14px;letter-spacing:-.01em;}
+  .node .sub{font-size:11.5px;color:var(--muted);}
+  .node.pay{border-color:color-mix(in srgb,var(--settle) 55%,var(--line));}
+  .node.pay .title{color:var(--settle);}
+  .arrow{display:flex;align-items:center;color:var(--brand);font-size:22px;font-weight:700;}
+  h1{font-size:15px;font-weight:600;color:var(--muted);text-align:center;margin:0 0 22px;letter-spacing:.02em;}
+</style>
+</head>
+<body>
+  <div>
+    <h1>AuditMesh — how one paid audit flows</h1>
+    <div class="flow">
+      <div class="node"><span class="emoji">🧑‍💼</span><span class="title">Buyer</span><span class="sub">wants an audit</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><span class="emoji">💸</span><span class="title">Sellers bid</span><span class="sub">compete on price</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><span class="emoji">🤝</span><span class="title">Award</span><span class="sub">best value wins</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><span class="emoji">🔬</span><span class="title">Pentest</span><span class="sub">Strix scan</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><span class="emoji">📄</span><span class="title">Report</span><span class="sub">signed findings</span></div>
+      <div class="arrow">→</div>
+      <div class="node pay"><span class="emoji">💰</span><span class="title">Payment</span><span class="sub">escrow released · devnet</span></div>
+    </div>
+  </div>
+</body>
+</html>
