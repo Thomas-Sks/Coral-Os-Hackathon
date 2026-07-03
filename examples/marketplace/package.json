@@ -1,0 +1,23 @@
+{
+  "name": "marketplace",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "tsx start.ts",
+    "start:audit": "tsx start-audit.ts",
+    "feed": "npm --prefix feed start",
+    "web": "npm --prefix web run dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@types/node": "^20.0.0",
+    "solana-coralos": "file:../.."
+  }
+}
